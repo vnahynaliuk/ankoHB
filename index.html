@@ -55,6 +55,10 @@
   .track i { display: block; height: 100%; }
   .actions { display: flex; gap: 10px; margin-top: 20px; }
   .actions button { text-align: center; margin: 0; }
+  .shots { display: grid; gap: 10px; margin: 0 0 20px; }
+  .shots.two { grid-template-columns: 1fr 1fr; }
+  .shots img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; object-position: center 20%; display: block; border: 3px solid var(--line); border-radius: 12px; }
+  .shots:not(.two) img { aspect-ratio: 4 / 3; }
   [hidden] { display: none !important; }
   @media (prefers-reduced-motion: reduce) { .bar i, .bg { transition: none; } }
 </style>
@@ -82,6 +86,7 @@
       <h1 id="rname" style="margin:0"></h1>
     </div>
     <p class="big" id="rtext"></p>
+    <div class="shots" id="rshots"></div>
     <div id="rows"></div>
     <div class="actions">
       <button id="share">Поділитися</button>
@@ -139,6 +144,17 @@ function finish() {
   $("rtext").textContent = ch.text;
   $("rdot").textContent = ch.name[0];
   $("rdot").style.background = ch.color;
+
+  const shots = $("rshots");
+  shots.innerHTML = "";
+  const ph = ch.photos || [];
+  shots.className = "shots" + (ph.length > 1 ? " two" : "");
+  ph.forEach(src => {
+    const im = document.createElement("img");
+    im.src = src; im.alt = ch.name;
+    im.onerror = () => im.remove(); // якщо файлу немає, фото просто не показується
+    shots.appendChild(im);
+  });
 
   $("rows").innerHTML = "";
   sorted.forEach(k => {
