@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Хто ти з компанії?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Rubik:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f58220;
+    --ink: #1c1109;
+    --brown: #8a3b00;
+    --accent: #ffa63d;
+    --card: #fff3dc;
+    --line: #1c1109;
+    --stripe: #1c1109;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1c1109; --ink: #fff0d6; --brown: #ffb04d; --accent: #f58220; --card: #2e1c0e; --line: #fff0d6; --stripe: #f58220; }
+  }
+  .bgs { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--bg); }
+  .bg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity 1.2s ease; }
+  .bg.on { opacity: 1; }
+  .bgs::after { content: ""; position: absolute; inset: 0; background: rgba(245,130,32,.28); }
+  @media (prefers-color-scheme: dark) { .bgs::after { background: rgba(28,17,9,.55); } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: "Rubik", system-ui, sans-serif; font-size: 18px; line-height: 1.45;
+    min-height: 100vh; padding: 24px 16px 48px;
+  }
+  main { max-width: 640px; margin: 0 auto; }
+  h1, h2 { font-family: "Unbounded", "Arial Black", sans-serif; font-weight: 900; line-height: 1.1; margin: 0 0 16px; }
+  h1 { font-size: clamp(32px, 9vw, 54px); }
+  h2 { font-size: clamp(20px, 5vw, 28px); }
+  .card { background: var(--card); border: 3px solid var(--line); border-radius: 18px; padding: 24px; box-shadow: 6px 6px 0 var(--line); }
+  .bar { height: 10px; background: transparent; border: 2px solid var(--line); border-radius: 99px; margin-bottom: 20px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+  button {
+    font: inherit; color: inherit; cursor: pointer; text-align: left; width: 100%;
+    background: var(--bg); border: 2px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 10px;
+  }
+  button:hover { background: var(--accent); color: #1c1109; }
+  button:focus-visible { outline: 3px solid var(--brown); outline-offset: 2px; }
+  button.main { background: var(--accent); color: #1c1109; font-weight: 500; text-align: center; box-shadow: 3px 3px 0 var(--line); }
+  .count { font-size: 15px; color: var(--brown); margin: 0 0 8px; }
+  .big { font-size: 20px; margin: 0 0 20px; }
+  .who { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+  .dot { flex: none; width: 72px; height: 72px; border-radius: 50%; border: 3px solid var(--line); display: grid; place-items: center; font-family: "Unbounded", sans-serif; font-weight: 900; font-size: 32px; color: #1c1109; }
+  .row { display: grid; grid-template-columns: 110px 1fr 44px; align-items: center; gap: 10px; font-size: 15px; margin-top: 8px; }
+  .track { height: 12px; border: 2px solid var(--line); border-radius: 99px; overflow: hidden; }
+  .track i { display: block; height: 100%; }
+  .actions { display: flex; gap: 10px; margin-top: 20px; }
+  .actions button { text-align: center; margin: 0; }
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { .bar i, .bg { transition: none; } }
+</style>
+</head>
+<body>
+<div class="bgs" aria-hidden="true"><div class="bg"></div><div class="bg"></div></div>
+<main>
+  <section id="start" class="card">
+    <h1>Хто ти з нашої компанії?</h1>
+    <p class="big">Кілька питань без жодної моралі. Результат гарантовано не для співбесіди.</p>
+    <button class="main" id="go">Почати</button>
+  </section>
+
+  <section id="quiz" class="card" hidden>
+    <div class="bar"><i id="fill"></i></div>
+    <p class="count" id="count"></p>
+    <h2 id="q"></h2>
+    <div id="answers"></div>
+  </section>
+
+  <section id="result" class="card" hidden>
+    <p class="count">Ти в душі:</p>
+    <div class="who">
+      <div class="dot" id="rdot"></div>
+      <h1 id="rname" style="margin:0"></h1>
+    </div>
+    <p class="big" id="rtext"></p>
+    <div id="rows"></div>
+    <div class="actions">
+      <button id="share">Поділитися</button>
+      <button id="again" class="main">Ще раз</button>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ============ ПЕРСОНАЖІ ============
+   id: ключ, name: ім'я, color: колір кружечка, text: опис результату */
+const CHARACTERS = {
+  armand:  { name: "Арманд",   color: "#f0b73a", text: "Платиш зверху, жартуєш знизу. Ніхто не знає, що в тебе на умі, і ти сам теж." },
+  creed:   { name: "Крід",     color: "#d9663f", text: "Самодостатній до абсурду. Якщо щось треба зробити, ти зробиш це сам і ще й із себе." },
+  melavin: { name: "Мелавін",  color: "#7aa874", text: "Життя тебе не балує, але ти тримаєшся на гуморі та діагнозах." },
+  ferst:   { name: "Ферштапен", color: "#4a90c2", text: "Мовчиш у найвідповідальніші моменти. Ефективно, лаконічно, трохи лячно." },
+  pascal:  { name: "Паскаль",  color: "#e07bb5", text: "Культурна людина з дивними смаками. Читаєш класику, їси рошен, і все це суперечить одне одному." },
+  max:     { name: "Макс",     color: "#e6c9a0", text: "Простий, чесний і трохи гематогенний. Твоя сила в тому, що ти не вдаєш із себе складного." }
+};
+
+/* ============ ПИТАННЯ ============
+   Щоб додати питання: скопіюй блок { q: "...", a: [ ... ] } і встав у кінець.
+   c = ключ персонажа з CHARACTERS. */
+const QUESTIONS = [
+  { q: "За скільки б ви з'їли чиєсь говно?", a: [
+    { t: "Заплатив би зверху", c: "armand" },
+    { t: "Я б з'їв своє говно", c: "creed" },
+    { t: "Я говно по жизні", c: "melavin" },
+    { t: "Утримуюсь від відповіді", c: "ferst" },
+    { t: "Я і так читаю російську класику", c: "pascal" }
+  ]},
+  { q: "Виєбали б ви Молнію Макквін?", a: [
+    { t: "Так", c: "max" },
+    { t: "Я б виїбав себе", c: "creed" },
+    { t: "Ні", c: "pascal" },
+    { t: "З якої саме частини?", c: "armand" },
+    { t: "Да бо живі люди мені не дають", c: "melavin" }
+  ]},
+  { q: "Які ваші улюблені солодощі?", a: [
+    { t: "Говно на палці", c: "armand" },
+    { t: "Цукерки Рошен «Червоний мак»", c: "pascal" },
+    { t: "Гематоген", c: "max" },
+    { t: "У мене діабет", c: "melavin" },
+    { t: "Чупа-чупс Філіпа Кіркорова", c: "creed" }
+  ]}
+];
+
+/* ============ ЛОГІКА ============ */
+const $ = id => document.getElementById(id);
+let i = 0, score = {};
+
+const shuffle = arr => arr.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(p => p[1]);
+const show = id => ["start", "quiz", "result"].forEach(s => $(s).hidden = s !== id);
+
+function start() {
+  i = 0; score = {};
+  Object.keys(CHARACTERS).forEach(k => score[k] = 0);
+  show("quiz"); render();
+}
+
+function render() {
+  const item = QUESTIONS[i];
+  $("count").textContent = "Питання " + (i + 1) + " з " + QUESTIONS.length;
+  $("fill").style.width = (i / QUESTIONS.length * 100) + "%";
+  $("q").textContent = item.q;
+  const box = $("answers");
+  box.innerHTML = "";
+  shuffle(item.a).forEach(ans => {
+    const b = document.createElement("button");
+    b.textContent = ans.t;
+    b.onclick = () => { score[ans.c]++; i++; i < QUESTIONS.length ? render() : finish(); };
+    box.appendChild(b);
+  });
+}
+
+function finish() {
+  const total = Object.values(score).reduce((a, b) => a + b, 0) || 1;
+  const sorted = Object.keys(score).sort((a, b) => score[b] - score[a]);
+  const top = sorted.filter(k => score[k] === score[sorted[0]]);
+  const win = top[Math.floor(Math.random() * top.length)]; // нічия: випадковий з лідерів
+  const ch = CHARACTERS[win];
+
+  $("rname").textContent = ch.name;
+  $("rtext").textContent = ch.text;
+  $("rdot").textContent = ch.name[0];
+  $("rdot").style.background = ch.color;
+
+  $("rows").innerHTML = "";
+  sorted.forEach(k => {
+    const pct = Math.round(score[k] / total * 100);
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = '<span></span><div class="track"><i></i></div><span></span>';
+    row.children[0].textContent = CHARACTERS[k].name;
+    row.querySelector("i").style.cssText = "width:" + pct + "%;background:" + CHARACTERS[k].color;
+    row.children[2].textContent = pct + "%";
+    $("rows").appendChild(row);
+  });
+  show("result");
+  window.scrollTo(0, 0);
+}
+
+
+/* ============ ФОН-СЛАЙДШОУ ============
+   Додай/прибери файли в списку PHOTOS. Фон змінюється сам кожні 8 с і при кожній відповіді. */
+const PHOTOS = ["bg1.jpg", "bg2.jpg", "bg3.jpg", "bg4.jpg", "bg5.jpg"];
+const layers = document.querySelectorAll(".bg");
+let cur = -1, front = 0;
+function nextBg() {
+  cur = (cur + 1) % PHOTOS.length;
+  const back = 1 - front;
+  layers[back].style.backgroundImage = 'url("' + PHOTOS[cur] + '")';
+  layers[back].classList.add("on");
+  layers[front].classList.remove("on");
+  front = back;
+}
+nextBg();
+let timer = setInterval(nextBg, 8000);
+document.addEventListener("click", e => {
+  if (e.target.closest("#answers button")) { clearInterval(timer); nextBg(); timer = setInterval(nextBg, 8000); }
+});
+
+$("go").onclick = start;
+$("again").onclick = start;
+$("share").onclick = async () => {
+  const text = "Я в душі " + $("rname").textContent + ". А ти хто?";
+  try {
+    if (navigator.share) await navigator.share({ title: document.title, text, url: location.href });
+    else { await navigator.clipboard.writeText(text + " " + location.href); $("share").textContent = "Скопійовано"; }
+  } catch (e) {}
+};
+</script>
+</body>
+</html>
