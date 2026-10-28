@@ -90,48 +90,11 @@
   </section>
 </main>
 
+<script src="questions.js"></script>
 <script>
-/* ============ ПЕРСОНАЖІ ============
-   id: ключ, name: ім'я, color: колір кружечка, text: опис результату */
-const CHARACTERS = {
-  armand:  { name: "Арманд",   color: "#f0b73a", text: "Платиш зверху, жартуєш знизу. Ніхто не знає, що в тебе на умі, і ти сам теж." },
-  creed:   { name: "Крід",     color: "#d9663f", text: "Самодостатній до абсурду. Якщо щось треба зробити, ти зробиш це сам і ще й із себе." },
-  melavin: { name: "Мелавін",  color: "#7aa874", text: "Життя тебе не балує, але ти тримаєшся на гуморі та діагнозах." },
-  ferst:   { name: "Ферштапен", color: "#4a90c2", text: "Мовчиш у найвідповідальніші моменти. Ефективно, лаконічно, трохи лячно." },
-  pascal:  { name: "Паскаль",  color: "#e07bb5", text: "Культурна людина з дивними смаками. Читаєш класику, їси рошен, і все це суперечить одне одному." },
-  max:     { name: "Макс",     color: "#e6c9a0", text: "Простий, чесний і трохи гематогенний. Твоя сила в тому, що ти не вдаєш із себе складного." }
-};
-
-/* ============ ПИТАННЯ ============
-   Щоб додати питання: скопіюй блок { q: "...", a: [ ... ] } і встав у кінець.
-   c = ключ персонажа з CHARACTERS. */
-const QUESTIONS = [
-  { q: "За скільки б ви з'їли чиєсь говно?", a: [
-    { t: "Заплатив би зверху", c: "armand" },
-    { t: "Я б з'їв своє говно", c: "creed" },
-    { t: "Я говно по жизні", c: "melavin" },
-    { t: "Утримуюсь від відповіді", c: "ferst" },
-    { t: "Я і так читаю російську класику", c: "pascal" }
-  ]},
-  { q: "Виєбали б ви Молнію Макквін?", a: [
-    { t: "Так", c: "max" },
-    { t: "Я б виїбав себе", c: "creed" },
-    { t: "Ні", c: "pascal" },
-    { t: "З якої саме частини?", c: "armand" },
-    { t: "Да бо живі люди мені не дають", c: "melavin" }
-  ]},
-  { q: "Які ваші улюблені солодощі?", a: [
-    { t: "Говно на палці", c: "armand" },
-    { t: "Цукерки Рошен «Червоний мак»", c: "pascal" },
-    { t: "Гематоген", c: "max" },
-    { t: "У мене діабет", c: "melavin" },
-    { t: "Чупа-чупс Філіпа Кіркорова", c: "creed" }
-  ]}
-];
-
 /* ============ ЛОГІКА ============ */
 const $ = id => document.getElementById(id);
-let i = 0, score = {};
+let i = 0, score = {}, list = [];
 
 const shuffle = arr => arr.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(p => p[1]);
 const show = id => ["start", "quiz", "result"].forEach(s => $(s).hidden = s !== id);
@@ -139,20 +102,28 @@ const show = id => ["start", "quiz", "result"].forEach(s => $(s).hidden = s !== 
 function start() {
   i = 0; score = {};
   Object.keys(CHARACTERS).forEach(k => score[k] = 0);
+  list = QUESTIONS.filter(q => q && q.q && Array.isArray(q.a) && q.a.length);
+  if (SETTINGS.shuffleQuestions || SETTINGS.maxQuestions) list = shuffle(list);
+  if (SETTINGS.maxQuestions > 0) list = list.slice(0, SETTINGS.maxQuestions);
+  if (!list.length) { alert("У questions.js немає жодного питання"); return; }
   show("quiz"); render();
 }
 
 function render() {
-  const item = QUESTIONS[i];
-  $("count").textContent = "Питання " + (i + 1) + " з " + QUESTIONS.length;
-  $("fill").style.width = (i / QUESTIONS.length * 100) + "%";
+  const item = list[i];
+  $("count").textContent = "Питання " + (i + 1) + " з " + list.length;
+  $("fill").style.width = (i / list.length * 100) + "%";
   $("q").textContent = item.q;
   const box = $("answers");
   box.innerHTML = "";
-  shuffle(item.a).forEach(ans => {
+  (SETTINGS.shuffleAnswers ? shuffle(item.a) : item.a).forEach(ans => {
     const b = document.createElement("button");
     b.textContent = ans.t;
-    b.onclick = () => { score[ans.c]++; i++; i < QUESTIONS.length ? render() : finish(); };
+    b.onclick = () => {
+      if (ans.c in score) score[ans.c]++;
+      else console.warn("Невідомий персонаж:", ans.c, "у відповіді «" + ans.t + "»");
+      i++; i < list.length ? render() : finish();
+    };
     box.appendChild(b);
   });
 }
