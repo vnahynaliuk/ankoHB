@@ -43,7 +43,7 @@
     font: inherit; color: inherit; cursor: pointer; text-align: left; width: 100%;
     background: var(--bg); border: 2px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 10px;
   }
-  button:hover { background: var(--accent); color: #1c1109; }
+  @media (hover: hover) { body:not(.nohover) button:hover { background: var(--accent); color: #1c1109; } }
   button:focus-visible { outline: 3px solid var(--brown); outline-offset: 2px; }
   button.main { background: var(--accent); color: #1c1109; font-weight: 500; text-align: center; box-shadow: 3px 3px 0 var(--line); }
   .count { font-size: 15px; color: var(--brown); margin: 0 0 8px; }
@@ -99,7 +99,7 @@
 <script>
 /* ============ ЛОГІКА ============ */
 const $ = id => document.getElementById(id);
-let i = 0, score = {}, list = [];
+let i = 0, score = {}, list = [], lockUntil = 0;
 
 const shuffle = arr => arr.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(p => p[1]);
 const show = id => ["start", "quiz", "result"].forEach(s => $(s).hidden = s !== id);
@@ -116,6 +116,7 @@ function start() {
 
 function render() {
   const item = list[i];
+  lockUntil = Date.now() + 300;
   $("count").textContent = "Питання " + (i + 1) + " з " + list.length;
   $("fill").style.width = (i / list.length * 100) + "%";
   $("q").textContent = item.q;
@@ -125,6 +126,8 @@ function render() {
     const b = document.createElement("button");
     b.textContent = ans.t;
     b.onclick = () => {
+      if (Date.now() < lockUntil) return; // захист від випадкового подвійного тапу
+      document.body.classList.add("nohover"); // нове питання не підсвічується під курсором
       if (ans.c in score) score[ans.c]++;
       else console.warn("Невідомий персонаж:", ans.c, "у відповіді «" + ans.t + "»");
       i++; i < list.length ? render() : finish();
@@ -191,10 +194,11 @@ document.addEventListener("click", e => {
   if (e.target.closest("#answers button")) { clearInterval(timer); nextBg(); timer = setInterval(nextBg, 8000); }
 });
 
+window.addEventListener("pointermove", () => document.body.classList.remove("nohover"));
 $("go").onclick = start;
 $("again").onclick = start;
 $("share").onclick = async () => {
-  const text = "Я в душі " + $("rname").textContent + ". А ти хто?";
+  const text = "Ти видів який у Анько кавалєр? " + $("rname").textContent + ". Схуялі інший?";
   try {
     if (navigator.share) await navigator.share({ title: document.title, text, url: location.href });
     else { await navigator.clipboard.writeText(text + " " + location.href); $("share").textContent = "Скопійовано"; }
